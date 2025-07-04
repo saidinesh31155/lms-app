@@ -15,7 +15,8 @@ jobs:
             channel: project-11
             text: "lms production deployment started go and approve it"
   database:
-    needs: approval
+    needs: 
+      - approval
     runs-on: self-hosted
     steps:
       - name: create network
@@ -33,7 +34,9 @@ jobs:
             docker container run -dt --name lmsdb -p 5432:5432 --network lmsnetwork -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD}} postgres
           fi
   build:
-    needs: approval
+    needs: 
+      - approval
+      - database
     runs-on: ubuntu-latest
     steps:
       - name: checkout the code
