@@ -19,7 +19,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: create network
-        run:
+        run: |
           if docker network ls --format '{{ .Name}}' | grep -wq lmsnetwork; then
             echo "lmsnetwork exist"
           else
