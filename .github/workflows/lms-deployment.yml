@@ -19,7 +19,12 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: create network
-        run: docker network create lmsnetwork
+        run:
+          if docker network ls --format '{{ .Name}}' | grep -wq lmsnetwork; then
+            echo "lmsnetwork exist"
+          else
+            docker network create lmsnetwork
+          fi
       - name: check whether the database lmsdb exist or not
         run: |
           if docker ps --format '{{ .Name}}' | grep -wq lmsdb; then
