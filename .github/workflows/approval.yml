@@ -6,6 +6,8 @@ jobs:
     environment:
       name: production
     steps:
+      - name: checkout
+        uses: actions/checkout@v4.2.2
       - name: send notification
         uses: slackapi/slack-github-action@v2.1.0
         with:
