@@ -11,7 +11,7 @@ jobs:
       - name: send notification
         uses: slackapi/slack-github-action@v2.1.0
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             channel: project-11
