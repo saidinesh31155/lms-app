@@ -13,6 +13,6 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
+          channel: project-11
           payload: |
-            channel: project-11
             text: "lms production deployment started go and approve it"
