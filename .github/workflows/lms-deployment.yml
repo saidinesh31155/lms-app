@@ -21,14 +21,14 @@ jobs:
     steps:
       - name: create network
         run: |
-          if docker network ls --format '{{ .Name}}' | grep -wq lmsnetwork; then
+          if docker network ls --format '{{ .Names }}' | grep -wq lmsnetwork; then
             echo "lmsnetwork exist"
           else
             docker network create lmsnetwork
           fi
       - name: check whether the database lmsdb exist or not
         run: |
-          if docker ps --format '{{ .Name}}' | grep -wq lmsdb; then
+          if docker ps -a --format '{{ .Names }}' | grep -wq lmsdb; then
             echo "lmsdb container exists"
           else
             docker container run -dt --name lmsdb -p 5432:5432 --network lmsnetwork -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD}} postgres
@@ -76,7 +76,7 @@ jobs:
         run: docker pull ${{ vars.DOCKER_USERNAME}}/api:latest
       - name: run the container
         run: |
-          if docker ps --format '{{ .Name}}' | grep -wq backend; then
+          if docker ps -a --format '{{ .Names }}' | grep -wq backend; then
             echo "container exist removing it and recreating new one"
             docker container rm -f backend
             docker container run -dt --name backend -p 3000:3000 --network lmsnetwork -e DATABASE_URL=postgresql://postgres:${{ secrets.DB_PASSWORD}}@lmsdb:5432/postgres -e PORT=3000 -e MODE=local  ${{ vars.DOCKER_USERNAME}}/api:latest
@@ -93,7 +93,7 @@ jobs:
         run: docker pull ${{ vars.DOCKER_USERNAME}}/webapp:latest
       - name: run the container
         run: |
-          if docker ps --format '{{ .Name}}' | grep -wq frontend; then
+          if docker ps -a --format '{{ .Names }}' | grep -wq frontend; then
             echo "container exist removing it and recreating new one"
             docker container rm -f frontend
             docker container run -dt --name web --network lmsnetwork -p 8080:80 ${{ vars.DOCKER_USERNAME}}/webapp:latest
