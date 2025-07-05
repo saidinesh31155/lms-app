@@ -6,19 +6,20 @@ jobs:
       name: production
     runs-on: ubuntu-latest
     steps:
-      - name: slack-notification
+      - name: Notification
         run: echo "eks deployment process started"
-      - name: server installations if using self hosted
+      - name: Server Installation
         run: |
           echo "aws cli installed"
           echo "kubectl installed with respect to cluster version"
           echo "docker installed"
-      - name: configure aws cli
+      - name: Configure AWS Cli
         run: echo "aws credentials are configure"
       - name: connect to cluster
         run: echo "connected to lms-cluster"
       - name: Databse Setup
         run: |
+          echo " cd k8s "
           echo " create pg-secret.yml and apply in cluster & kubectl apply -f pg-secret.yml"
           echo "create pg-deployment.yml & kubectl apply -f pg-deployment.yml"
           echo "create pg-service.yml & kubectl apply -f pg-service.yml"
