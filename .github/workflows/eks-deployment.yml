@@ -8,6 +8,8 @@ jobs:
     steps:
       - name: Notification
         run: echo "eks deployment process started"
+      - name: Checkout
+        run: echo " git clone https://github.com/muralialakuntla3/lms-app.git"
       - name: Server Installation
         run: |
           echo "aws cli installed"
@@ -19,7 +21,7 @@ jobs:
         run: echo "connected to lms-cluster"
       - name: Databse Setup
         run: |
-          echo " cd k8s "
+          echo " cd lms-app/k8s "
           echo " create pg-secret.yml and apply in cluster & kubectl apply -f pg-secret.yml"
           echo "create pg-deployment.yml & kubectl apply -f pg-deployment.yml"
           echo "create pg-service.yml & kubectl apply -f pg-service.yml"
