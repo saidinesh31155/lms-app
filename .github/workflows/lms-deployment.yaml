@@ -38,3 +38,77 @@ jobs:
           else
             docker container run -dt --name lmsdb -p 5432:5432 --network lmsnetwork -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD}} postgres
           fi
+  build:
+    needs: approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout the code
+        uses: actions/checkout@v4.2.2
+      - name: build backend image 
+        run: |
+          cd api
+          docker build -t ${{ vars.DOCKER_USERNAME }}/api .
+      - name: build frontend image 
+        run: |
+          cd webapp
+          docker build -t ${{ vars.DOCKER_USERNAME }}/webapp .
+      - name: docker hub login
+        uses: docker/login-action@v3.4.0
+      - name: push backend image
+        run: docker push ${{ vars.DOCKER_USERNAME }}/api
+      - name: push frontend image
+        run: docker push ${{ vars.DOCKER_USERNAME }}/webapp
+  backend:
+    needs:
+      - database
+      - build
+    runs-on: deploy
+    steps:
+      - name: pull the image
+        run: ${{ vars.DOCKER_USERNAME }}/api
+      - name: run the backend
+        run: |
+          if docker ps -a --format '{{ .Names }}' | grep -wq backend; then
+            echo "backend container exists"
+            docker container rm -f backend
+            docker rmi ${{ vars.DOCKER_USERNAME}}/api
+            docker container run -dt --name backend -p 3000:3000 --network lmsnetwork -e DATABASE_URL=postgresql://postgres:${{ secrets.DB_PASSWORD}}@lmsdb:5432/postgres -e PORT=3000 -e MODE=Prod  ${{ vars.DOCKER_USERNAME}}/api
+          else
+            docker container run -dt --name backend -p 3000:3000 --network lmsnetwork -e DATABASE_URL=postgresql://postgres:${{ secrets.DB_PASSWORD}}@lmsdb:5432/postgres -e PORT=3000 -e MODE=Prod  ${{ vars.DOCKER_USERNAME}}/api
+          fi
+  frontend:
+    needs:
+      - build
+    runs-on: deploy
+    steps:
+      - name: pull the image
+        run: ${{ vars.DOCKER_USERNAME }}/webapp
+      - name: run the frontend
+        run: |
+          if docker ps -a --format '{{ .Names }}' | grep -wq frontend; then
+            echo "frontend container exists"
+            docker container rm -f frontend
+            docker rmi ${{ vars.DOCKER_USERNAME}}/webapp
+            docker container run -dt --name frontend -p 80:80 --network lmsnetwork ${{ vars.DOCKER_USERNAME}}/webapp
+          else
+            docker container run -dt --name frontend -p 80:80 --network lmsnetwork ${{ vars.DOCKER_USERNAME}}/webapp
+          fi
+  feedback:
+    needs: 
+      - database
+      - backend
+      - frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: send notification to slack 
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            channel: project-1
+            text: "LMS Application Successfully Deployed into Production..."
+          
+    
+        
+          
