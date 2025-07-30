@@ -12,6 +12,18 @@ jobs:
           payload: |
             channel: project-1
             text: "LMS production deployment started"
+      
+  linting:
+    name: Build and analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
   approval:
     needs: notification
     runs-on: ubuntu-latest
@@ -39,7 +51,9 @@ jobs:
             docker container run -dt --name lmsdb -p 5432:5432 --network lmsnetwork -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD}} postgres
           fi
   build:
-    needs: approval
+    needs:
+      - approval
+      - linting
     runs-on: ubuntu-latest
     steps:
       - name: checkout the code
