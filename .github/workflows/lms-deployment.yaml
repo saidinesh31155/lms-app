@@ -68,7 +68,7 @@ jobs:
     runs-on: deploy
     steps:
       - name: pull the image
-        run: docker pull ${{ vars.DOCKER_USERNAME }}/api
+        run: docker pull ${{ vars.DOCKER_USERNAME }}/api:latest
       - name: run the backend
         run: |
           if docker ps -a --format '{{ .Names }}' | grep -wq backend; then
@@ -85,7 +85,7 @@ jobs:
     runs-on: deploy
     steps:
       - name: pull the image
-        run: docker pull ${{ vars.DOCKER_USERNAME }}/webapp
+        run: docker pull ${{ vars.DOCKER_USERNAME }}/webapp:latest
       - name: run the frontend
         run: |
           if docker ps -a --format '{{ .Names }}' | grep -wq frontend; then
