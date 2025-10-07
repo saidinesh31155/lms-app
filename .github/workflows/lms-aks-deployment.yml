@@ -1,1 +1,133 @@
+name: lms-deployment
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  # ------------------------
+  # Step 1: Slack Notification - Deployment Start
+  # ------------------------
+  notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: send notification to slack 
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            channel: project-1
+            text: "LMS production deployment started"
+
+  # ------------------------
+  # Step 2: Linting & Code Analysis
+  # ------------------------
+  linting:
+    name: Build and analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  # ------------------------
+  # Step 3: Approval before Production
+  # ------------------------
+  approval:
+    needs: notification
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: approval confirmation
+        run: echo "Approval given to deploy into production"
+
+  # ------------------------
+  # Step 4: Azure Login
+  # ------------------------
+  azure-login:
+    needs: approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+  # ------------------------
+  # Step 5: Build & Push Docker Images to ACR
+  # ------------------------
+  build:
+    needs:
+      - azure-login
+      - linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Backend image
+        run: |
+          cd api
+          docker build -t myacrname.azurecr.io/api:latest .
+
+      - name: Build Frontend image
+        run: |
+          cd webapp
+          docker build -t myacrname.azurecr.io/webapp:latest .
+
+      - name: Push images to ACR
+        run: |
+          echo ${{ secrets.AZURE_PASSWORD }} | docker login myacrname.azurecr.io --username ${{ secrets.AZURE_USERNAME }} --password-stdin
+          docker push myacrname.azurecr.io/api:latest
+          docker push myacrname.azurecr.io/webapp:latest
+
+  # ------------------------
+  # Step 6: Deploy to AKS
+  # ------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set kubectl context to AKS
+        run: |
+          az aks get-credentials --resource-group myResourceGroup --name myakscluster --overwrite-existing
+
+      - name: Deploy Backend to AKS
+        run: |
+          kubectl apply -f k8s/backend-deployment.yaml
+
+      - name: Deploy Frontend to AKS
+        run: |
+          kubectl apply -f k8s/frontend-deployment.yaml
+
+      - name: Wait for Frontend IP
+        run: |
+          echo "Waiting for frontend service to get an external IP..."
+          kubectl wait --for=condition=available --timeout=300s deployment/frontend
+          kubectl get svc frontend
+
+  # ------------------------
+  # Step 7: Slack Notification - Deployment Complete
+  # ------------------------
+  feedback:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: send notification to slack 
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            channel: project-1
+            text: "LMS Application Successfully Deployed into Production..."
 
