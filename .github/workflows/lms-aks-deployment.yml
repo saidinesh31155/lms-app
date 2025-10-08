@@ -1,9 +1,6 @@
-name: lms-deployment
-
-on:
-  workflow_dispatch:
-
-job:
+name: lms-aks-deployment
+on: workflow_dispatch
+jobs:
   notification:
     runs-on: ubuntu-latest
     steps:
