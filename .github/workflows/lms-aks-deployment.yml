@@ -1,5 +1,9 @@
 name: lms-aks-deployment
 on: workflow_dispatch
+
+env:
+  ACR_LOGIN_SERVER: lmsacr123.azurecr.io
+
 jobs:
   notification:
     runs-on: ubuntu-latest
@@ -55,18 +59,18 @@ jobs:
       - name: Build Backend image
         run: |
           cd api
-          docker build -t myacrname.azurecr.io/api:latest .
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/api:latest .
 
       - name: Build Frontend image
         run: |
           cd webapp
-          docker build -t myacrname.azurecr.io/webapp:latest .
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/webapp:latest .
 
       - name: Push images to ACR
         run: |
-          echo ${{ secrets.AZURE_PASSWORD }} | docker login myacrname.azurecr.io --username ${{ secrets.AZURE_USERNAME }} --password-stdin
-          docker push myacrname.azurecr.io/api:latest
-          docker push myacrname.azurecr.io/webapp:latest
+          echo ${{ secrets.AZURE_PASSWORD }} | docker login ${{ env.ACR_LOGIN_SERVER }} --username ${{ secrets.AZURE_USERNAME }} --password-stdin
+          docker push ${{ env.ACR_LOGIN_SERVER }}/api:latest
+          docker push ${{ env.ACR_LOGIN_SERVER }}/webapp:latest
 
   deploy:
     needs: build
@@ -77,20 +81,25 @@ jobs:
 
       - name: Set kubectl context to AKS
         run: |
-          az aks get-credentials --resource-group myResourceGroup --name myakscluster --overwrite-existing
+          az aks get-credentials --resource-group  ${{ secrets.RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER }} --overwrite-existing
 
+      - name: Deploy postgres 
+        run: |
+          kubectl apply -f k8s/lms-aks-db-deploy.yml
+          kubectl apply -f k8s/lms-aks-db-service.yml
+          kubectl rollout status deployment/lmsdb --timeout=300s
+          
       - name: Deploy Backend to AKS
         run: |
-          kubectl apply -f k8s/backend-deployment.yaml
+          kubectl apply -f k8s/lms-aks-be-deploy.yml
+          kubectl apply -f k8s/lms-aks-be-service.yml
+          kubectl rollout status deployment/backend --timeout=300s
 
       - name: Deploy Frontend to AKS
         run: |
-          kubectl apply -f k8s/frontend-deployment.yaml
-
-      - name: Wait for Frontend IP
-        run: |
-          echo "Waiting for frontend service to get an external IP..."
-          kubectl wait --for=condition=available --timeout=300s deployment/frontend
+          kubectl apply -f k8s/lms-aks-fe-deploy.yml
+          kubectl apply -f k8s/lms-aks-fe-service.yml
+          kubectl rollout status deployment/frontend --timeout=300s
           kubectl get svc frontend
 
   feedback:
