@@ -87,7 +87,7 @@ jobs:
 
       - name: Set kubectl context to AKS
         run: |
-          az aks get-credentials --resource-group  ${{ secrets.RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER }} --overwrite-existing
+          az aks get-credentials --resource-group  ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
 
       - name: Deploy postgres 
         run: |
